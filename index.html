@@ -7,41 +7,46 @@
 <style>
 #scope {
 	background: #90c0f0;
-	width: 900px;
-	height: 300px;
+	width: 1000px;
+	height: 500px;
 	margin: 0 auto;
+}
+.time_slots{
 }
 #space {
 	background:#ff0000;
-	width: 20px;
-	height: 300px;
+	width: 30px;
+	height: 500px;
 }
 .nano_machine {
 	background:#00ff00;
-	width: 20px;
-	height: 20px;
+	width: 30px;
+	height: 30px;
 }
 .time_line {
 	background:#0000ff;
-	width: 900px;
+	width: 1000px;
 	height: 3px;
 }
 .molecule {
 	background:#ffff00;
-	width: 10px;
-	height: 10px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border:2px solid #cccc00;
 }
 .round-button-circle {
+	background: #4679BD; 
 	width: 50px;
 	height: 50px;
 	border-radius: 50%;
 	border:5px solid #9fdcec;
 	overflow:hidden;
-	background: #4679BD; 
 }
 .round-button-circle:hover {
-		background:#30588e;
+	background:#30588e;
 }
+
 </style>
 <script src="//code.jquery.com/jquery-1.10.2.js"></script>
 <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
@@ -54,12 +59,12 @@
 		<div class="nano_machine" id="tx"></div> 
 		<div class="nano_machine" id="rx"></div> 
 	</div>
-	<div class="molecule" id="m1"></div>
-	<div class="molecule" id="m2"></div>
+	<div class="time_slots" id="tx_ts"></div>
 </div>
 <div class="round-button-circle" onclick="control();"></div>
 
 <script type="text/javascript">
+var height = 500;
 $( "#space" ).position({
 	my: "center",
 	at: "left",
@@ -67,23 +72,28 @@ $( "#space" ).position({
 });
 $("#tx_tl").position({
 	my: "center",
-	at: "top+"+parseInt(300*0.2),
+	at: "top+"+parseInt(height*0.2),
 	of: "#scope" 
 });
 $("#rx_tl").position({
 	my: "center",
-	at: "bottom-"+parseInt(300*0.2),
+	at: "bottom-"+parseInt(height*0.2),
 	of: "#scope" 
 });
 $("#tx").position({
 	my: "bottom",
-	at: "top+"+parseInt(300*0.2),
+	at: "top+"+parseInt(height*0.2),
 	of: "#space"
 });
 $("#rx").position({
 	my: "top",
-	at: "bottom-"+parseInt(300*0.2),
+	at: "bottom-"+parseInt(height*0.2),
 	of: "#space"
+});
+$("#tx_ts").position({
+	my: "top",
+	at: "bottom",
+	of: "#scope"
 });
 
 var bool = false;
@@ -109,7 +119,7 @@ var Space = {
 		var space = {};
 		space.count = 0;
 		space.move = function(){
-			space.count = (space.count+1) % 900;
+			space.count = (space.count+1) % 1000;
 			$("#space").position({my:"center", at:"left+"+parseInt(space.count), of:"#scope" });
 		}
 		return space;
@@ -137,17 +147,17 @@ var Molecule = {
 		molecule.state = MOLECULE_STATE.UNRELEASED;
 		$(molecule.id).hide();
 		molecule.random_walk = function(){
-			molecule.y += randn()*2 + 1;
+			molecule.y += randn()*3 + 1;
 			$(molecule.id).position({my:"center",	at: "top+"+parseInt(molecule.y), of: "#space" });
 		}
 		molecule.release = function(){
 			$(molecule.id).show();
-			molecule.y = 300*0.2;
+			molecule.y = height*0.2;
 			molecule.state = MOLECULE_STATE.RANDOM_WALK;
 		}
 		molecule.move = function(){
 			if(molecule.state == MOLECULE_STATE.RANDOM_WALK){
-				if(molecule.y > 300*0.8){
+				if(molecule.y > height*0.8){
 					molecule.state = MOLECULE_STATE.CAUGHT;
 					molecule.caught_time = molecule.s1.count;
 					$(molecule.id).position({my:"center",	at:"left+"+parseInt(molecule.caught_time)+" top+"+parseInt(molecule.y), of: "#scope" });
@@ -160,21 +170,44 @@ var Molecule = {
 	}
 };
 
+//$("#scope").add("<div class=\"molecule\" id=\"m3\"></div>");
+//var newDiv = document.createElement("div");
+//newDiv.setAttribute("class","molecule");
+
 var Transmitter = {
 	createNew: function(s1){
 		var tx = {};
 		tx.s1 = s1;
-		tx.m1 = Molecule.createNew("#m1", s1);
-		tx.m2 = Molecule.createNew("#m2", s1);
+		tx.molecules = [];
+		tx.N = 15;
+		tx.init = function(){
+			for(var i=0; i<tx.N; ++i){
+				var id = "m"+parseInt(i);
+				$("#scope").append("<div id='"+id+"'/>");
+				$("#"+id).attr("class","molecule");
+				tx.molecules.push(Molecule.createNew("#"+id, s1));
+			}
+		}
 		tx.release = function(){
-			if(tx.s1.count == 100) tx.m1.release();
-			if(tx.s1.count == 200) tx.m2.release();
+			if(tx.s1.count == 100) {
+				for(var i=0; i<5; ++i)
+					tx.molecules[i].release();
+			}
+			if(tx.s1.count == 200) {
+				for(var i=1*5; i<2*5; ++i)
+					tx.molecules[i].release();
+			}
+			if(tx.s1.count == 300) {
+				for(var i=2*5; i<3*5; ++i)
+					tx.molecules[i].release();
+			}
 		}
 		tx.moveMolecules = function(){
 			tx.release();
-			tx.m1.move();
-			tx.m2.move();
+			for(var index in tx.molecules)
+				tx.molecules[index].move();
 		}
+		tx.init();
 		return tx;
 	}
 }
