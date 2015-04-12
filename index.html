@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>position demo</title>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<style>
+#scope {
+	background: #90c0f0;
+	width: 900px;
+	height: 300px;
+	margin: 0 auto;
+}
+#space {
+	background:#ff0000;
+	width: 20px;
+	height: 300px;
+}
+.nano_machine {
+	background:#00ff00;
+	width: 20px;
+	height: 20px;
+}
+.time_line {
+	background:#0000ff;
+	width: 900px;
+	height: 3px;
+}
+.molecule {
+	background:#ffff00;
+	width: 10px;
+	height: 10px;
+}
+.round-button-circle {
+	width: 50px;
+	height: 50px;
+	border-radius: 50%;
+	border:5px solid #9fdcec;
+	overflow:hidden;
+	background: #4679BD; 
+}
+.round-button-circle:hover {
+		background:#30588e;
+}
+</style>
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+</head>
+<body>
+<div id="scope">
+	<div class="time_line" id="tx_tl"></div>
+	<div class="time_line" id="rx_tl"></div>
+	<div id="space">
+		<div class="nano_machine" id="tx"></div> 
+		<div class="nano_machine" id="rx"></div> 
+	</div>
+	<div class="molecule" id="m1"></div>
+	<div class="molecule" id="m2"></div>
+</div>
+<div class="round-button-circle" onclick="control();"></div>
+
+<script type="text/javascript">
+$( "#space" ).position({
+	my: "center",
+	at: "left",
+	of: "#scope"
+});
+$("#tx_tl").position({
+	my: "center",
+	at: "top+"+parseInt(300*0.2),
+	of: "#scope" 
+});
+$("#rx_tl").position({
+	my: "center",
+	at: "bottom-"+parseInt(300*0.2),
+	of: "#scope" 
+});
+$("#tx").position({
+	my: "bottom",
+	at: "top+"+parseInt(300*0.2),
+	of: "#space"
+});
+$("#rx").position({
+	my: "top",
+	at: "bottom-"+parseInt(300*0.2),
+	of: "#space"
+});
+
+var bool = false;
+function control(){
+	if(bool==false){
+		bool = true;
+		animate();
+	}
+	else{
+		bool = false;
+	}
+}
+
+function animate(){
+	doMove();
+	if(bool)
+		setTimeout(animate, 30);
+}
+
+
+var Space = {
+	createNew: function(){
+		var space = {};
+		space.count = 0;
+		space.move = function(){
+			space.count = (space.count+1) % 900;
+			$("#space").position({my:"center", at:"left+"+parseInt(space.count), of:"#scope" });
+		}
+		return space;
+	}
+};
+
+
+function randn(){
+	return Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
+}
+
+var MOLECULE_STATE = {
+	RANDOM_WALK: 	{value: 0},
+	CAUGHT:			{value: 1},
+	UNRELEASED:		{value: 2}
+};
+
+var Molecule = {
+	createNew: function(id, s1){
+		var molecule = {};
+		molecule.id = id;
+		molecule.s1 = s1;
+		molecule.y;
+		molecule.caught_time;
+		molecule.state = MOLECULE_STATE.UNRELEASED;
+		$(molecule.id).hide();
+		molecule.random_walk = function(){
+			molecule.y += randn()*2 + 1;
+			$(molecule.id).position({my:"center",	at: "top+"+parseInt(molecule.y), of: "#space" });
+		}
+		molecule.release = function(){
+			$(molecule.id).show();
+			molecule.y = 300*0.2;
+			molecule.state = MOLECULE_STATE.RANDOM_WALK;
+		}
+		molecule.move = function(){
+			if(molecule.state == MOLECULE_STATE.RANDOM_WALK){
+				if(molecule.y > 300*0.8){
+					molecule.state = MOLECULE_STATE.CAUGHT;
+					molecule.caught_time = molecule.s1.count;
+					$(molecule.id).position({my:"center",	at:"left+"+parseInt(molecule.caught_time)+" top+"+parseInt(molecule.y), of: "#scope" });
+				}
+				else
+					molecule.random_walk();
+			}
+		}
+		return molecule;
+	}
+};
+
+var Transmitter = {
+	createNew: function(s1){
+		var tx = {};
+		tx.s1 = s1;
+		tx.m1 = Molecule.createNew("#m1", s1);
+		tx.m2 = Molecule.createNew("#m2", s1);
+		tx.release = function(){
+			if(tx.s1.count == 100) tx.m1.release();
+			if(tx.s1.count == 200) tx.m2.release();
+		}
+		tx.moveMolecules = function(){
+			tx.release();
+			tx.m1.move();
+			tx.m2.move();
+		}
+		return tx;
+	}
+}
+
+var s1 = Space.createNew();
+var tx1 = Transmitter.createNew(s1);
+function doMove() {
+	s1.move();
+	tx1.moveMolecules();
+}
+</script>
+
+
+</body>
+</html>
