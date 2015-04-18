@@ -2,31 +2,29 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>position demo</title>
-<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+<title>molecular communication AIGN demo</title>
+<link href="./bootstrap-3.3.4-dist/css/bootstrap.min.css" rel="stylesheet" media="screen">
 <style>
-#scope {
+#simu {
 	background: #90c0f0;
 	width: 1000px;
 	height: 500px;
 	margin: 0 auto;
-}
-.time_slots{
 }
 #space {
 	background:#ff0000;
 	width: 30px;
 	height: 500px;
 }
-.nano_machine {
-	background:#00ff00;
+#tx{
+	background:#009900;
 	width: 30px;
 	height: 30px;
 }
-.time_line {
+#rx{
 	background:#0000ff;
-	width: 1000px;
-	height: 3px;
+	width: 30px;
+	height: 30px;
 }
 .molecule {
 	background:#ffff00;
@@ -46,54 +44,75 @@
 .round-button-circle:hover {
 	background:#30588e;
 }
-
 </style>
+
 <script src="//code.jquery.com/jquery-1.10.2.js"></script>
 <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.1/angular.min.js"></script>
+<script src="./bootstrap-3.3.4-dist/js/bootstrap.min.js"></script>
+
 </head>
 <body>
-<div id="scope">
-	<div class="time_line" id="tx_tl"></div>
-	<div class="time_line" id="rx_tl"></div>
-	<div id="space">
-		<div class="nano_machine" id="tx"></div> 
-		<div class="nano_machine" id="rx"></div> 
+<div id="all">
+	<ul class="nav nav-pills">
+		<li><button class="btn btn-primary" 
+					type="button" 
+					onclick="control();">
+					start/stop
+		</button></li>
+		<li><a href="#">1</a></li>
+		<li><a href="#">2</a></li>
+	</ul>
+	<div id="simu">
+		<canvas id="canvas" width="1000" height="500"></canvas>
+		<div id="space">
+			<div class="nano_machine" id="tx"></div> 
+			<div class="nano_machine" id="rx"></div> 
+		</div>
 	</div>
-	<div class="time_slots" id="tx_ts"></div>
 </div>
-<div class="round-button-circle" onclick="control();"></div>
-
 <script type="text/javascript">
-var height = 500;
+
+var canvas = document.getElementById("canvas");
+var context = canvas.getContext("2d");
+
+function drawLine(x1, y1, x2, y2, color, width){
+	context.beginPath();
+	//context.arc(x, y, r, 0, Math.PI*2, false);
+	//context.fillStyle = color;
+	context.strokeStyle = color;
+	context.lineWidth = width;
+	context.moveTo(x1,y1);
+	context.lineTo(x2,y2);
+	context.stroke();
+}
+
+function drawTimeLine(){
+	drawLine(0, canvas.height*0.2, canvas.width, canvas.height*0.2, "#009900", 3);
+	drawLine(0, canvas.height*0.8, canvas.width, canvas.height*0.8, "#0000ff", 3);
+}
+
+drawTimeLine();
+
 $( "#space" ).position({
 	my: "center",
 	at: "left",
-	of: "#scope"
-});
-$("#tx_tl").position({
-	my: "center",
-	at: "top+"+parseInt(height*0.2),
-	of: "#scope" 
-});
-$("#rx_tl").position({
-	my: "center",
-	at: "bottom-"+parseInt(height*0.2),
-	of: "#scope" 
+	of: "#simu"
 });
 $("#tx").position({
 	my: "bottom",
-	at: "top+"+parseInt(height*0.2),
+	at: "top+"+parseInt(canvas.height*0.2),
 	of: "#space"
 });
 $("#rx").position({
 	my: "top",
-	at: "bottom-"+parseInt(height*0.2),
+	at: "bottom-"+parseInt(canvas.height*0.2),
 	of: "#space"
 });
 $("#tx_ts").position({
 	my: "top",
 	at: "bottom",
-	of: "#scope"
+	of: "#simu"
 });
 
 var bool = false;
@@ -120,7 +139,9 @@ var Space = {
 		space.count = 0;
 		space.move = function(){
 			space.count = (space.count+1) % 1000;
-			$("#space").position({my:"center", at:"left+"+parseInt(space.count), of:"#scope" });
+			$("#space").position({my:"center", at:"left+"+parseInt(space.count), of:"#simu" });
+			//context.clearRect(space.count-1, 0, 1, canvas.height);
+			//drawTimeLine();
 		}
 		return space;
 	}
@@ -128,7 +149,13 @@ var Space = {
 
 
 function randn(){
-	return Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
+	var n = 12;
+	var ret = 0;
+	for(var i=0; i<n; ++i)
+		ret += Math.random();
+	return ret - n/2;
+	//return ((Math.random() + Math.random() + Math.random() + Math.random() + Math.random() + Math.random()) - 3) / 3;
+	//return Math.sqrt(-2 * Math.log(Math.random())) * Math.cos(2 * Math.PI * Math.random());
 }
 
 var MOLECULE_STATE = {
@@ -147,20 +174,23 @@ var Molecule = {
 		molecule.state = MOLECULE_STATE.UNRELEASED;
 		$(molecule.id).hide();
 		molecule.random_walk = function(){
+			var y_old = molecule.y;
+			var x_old = molecule.s1.count;
 			molecule.y += randn()*3 + 1;
 			$(molecule.id).position({my:"center",	at: "top+"+parseInt(molecule.y), of: "#space" });
+			drawLine(x_old, y_old, molecule.s1.count, molecule.y, "black", 1);
 		}
 		molecule.release = function(){
 			$(molecule.id).show();
-			molecule.y = height*0.2;
+			molecule.y = canvas.height*0.2;
 			molecule.state = MOLECULE_STATE.RANDOM_WALK;
 		}
 		molecule.move = function(){
 			if(molecule.state == MOLECULE_STATE.RANDOM_WALK){
-				if(molecule.y > height*0.8){
+				if(molecule.y > canvas.height*0.8){
 					molecule.state = MOLECULE_STATE.CAUGHT;
 					molecule.caught_time = molecule.s1.count;
-					$(molecule.id).position({my:"center",	at:"left+"+parseInt(molecule.caught_time)+" top+"+parseInt(molecule.y), of: "#scope" });
+					$(molecule.id).position({my:"center",	at:"left+"+parseInt(molecule.caught_time)+" top+"+parseInt(molecule.y), of: "#simu" });
 				}
 				else
 					molecule.random_walk();
@@ -170,7 +200,7 @@ var Molecule = {
 	}
 };
 
-//$("#scope").add("<div class=\"molecule\" id=\"m3\"></div>");
+//$("#simu").add("<div class=\"molecule\" id=\"m3\"></div>");
 //var newDiv = document.createElement("div");
 //newDiv.setAttribute("class","molecule");
 
@@ -183,7 +213,7 @@ var Transmitter = {
 		tx.init = function(){
 			for(var i=0; i<tx.N; ++i){
 				var id = "m"+parseInt(i);
-				$("#scope").append("<div id='"+id+"'/>");
+				$("#simu").append("<div id='"+id+"'/>");
 				$("#"+id).attr("class","molecule");
 				tx.molecules.push(Molecule.createNew("#"+id, s1));
 			}
@@ -218,6 +248,7 @@ function doMove() {
 	s1.move();
 	tx1.moveMolecules();
 }
+
 </script>
 
 
