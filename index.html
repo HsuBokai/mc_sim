@@ -44,7 +44,7 @@
 	background:#30588e;
 }
 .rx_time {
-	background:#ff0000;
+	background:#0000ff;
 	width: 3px;
 	height: 100%;
 }
@@ -55,6 +55,7 @@
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.1/angular.min.js"></script>
 <script src="./bootstrap-3.3.4-dist/js/bootstrap.min.js"></script>
 <script src="http://numericjs.com/lib/numeric-1.2.6.min.js"></script>
+<script src="./receiver.js"></script>
 
 </head>
 <body>
@@ -112,7 +113,7 @@ $("#tx").position({
 });
 $("#rx").position({
 	my: "top",
-	at: "bottom-"+parseInt(canvas.height*0.2),
+	at: "top+"+parseInt(canvas.height*0.8),
 	of: "#space"
 });
 $("#tx_ts").position({
@@ -135,7 +136,7 @@ function control(){
 function animate(){
 	doMove();
 	if(bool)
-		setTimeout(animate, 30);
+		setTimeout(animate, 15);
 }
 
 var Space = {
@@ -144,7 +145,7 @@ var Space = {
 		space.width = 30;
 		space.count = 0;
 		space.move = function(){
-			space.count = (space.count+1) % 1000;
+			space.count = (space.count+0.5) % canvas.width;
 			$("#space").position({my:"left", at:"left+"+parseInt(space.count), of:"#simu" });
 			//context.clearRect(space.count-1, 0, 1, canvas.height);
 			//drawTimeLine();
@@ -181,16 +182,16 @@ var Molecule = {
 		molecule.y;
 		molecule.caught_time;
 		molecule.state = MOLECULE_STATE.UNRELEASED;
-		$(molecule.id).hide();
+		//$(molecule.id).hide();
 		molecule.random_walk = function(){
 			var y_old = molecule.y;
 			var x_old = molecule.s1.get_count();
-			molecule.y += randn()*3 + 1;
+			molecule.y += randn()*6 + 1;
 			$(molecule.id).position({my:"center",	at: "top+"+parseInt(molecule.y), of: "#space" });
 			drawLine(x_old, y_old, molecule.s1.get_count(), molecule.y, "black", 1);
 		}
 		molecule.release = function(){
-			$(molecule.id).show();
+			//$(molecule.id).show();
 			molecule.y = canvas.height*0.2;
 			molecule.state = MOLECULE_STATE.RANDOM_WALK;
 		}
@@ -262,9 +263,9 @@ var Transmitter = {
 		var tx = {};
 		tx.s1 = s1;
 		tx.n_i = [];
-		tx.tau = 200;
-		tx.Ts = 100;
-		tx.K = 2;
+		tx.tau = 50;
+		tx.Ts = 120;
+		tx.K = 12;
 		tx.symbols = [];
 		tx.init = function(){
 			for(var i=0; i<tx.K; ++i){
@@ -283,63 +284,15 @@ var Transmitter = {
 				tx.symbols[i].moveMolecules();
 			}
 		}
-		//tx.init();
+		tx.init();
 		return tx;
-	}
-}
-
-var Receiver = {
-	createNew: function(tx){
-		var rx = {};
-		rx.tau_hat = 0;
-		rx.Ts_hat = 0;
-		rx.observ = [];
-		rx.init = function(){
-			for(var i = 0; i<tx.K; ++i){
-				var id = "rx_time_"+parseInt(i);
-				$("#simu").append("<div id='"+id+"'/>");
-				$("#"+id).attr("class","rx_time");
-			}
-		}
-		rx.catchMolecules = function(){
-			for(var i=0; i<tx.K; ++i){
-				tx.symbols[i].catchMolecules(rx);
-			}
-		}
-		rx.update = function(max_k){
-			for(var k = 0; k<max_k; ++k){
-				var id = "rx_time_"+parseInt(k);
-				var est = rx.tau_hat + k*rx.Ts_hat;
-				$("#"+id).position({my:"left", at:"left+"+parseInt(est), of:"#simu"});
-			}
-		}
-		rx.init_est = function(){
-			var A = [[1,2,3],
-				     [4,5,6],
-					 [7,3,9]];
-			var x = [3,1,2];
-			var b = numeric.dot(A,x);
-			rx.tau_hat = rx.observ[0] - 200;
-			rx.Ts_hat = rx.observ[7]-rx.observ[0];
-			rx.update(2);
-		}
-		rx.caught = function(time){
-			rx.observ.push(time);
-			for(var i=0; i<rx.observ.length; ++i){
-				console.log(rx.observ[i]);
-			}
-			if( rx.observ.length == 8)
-				rx.init_est();
-		}
-		rx.init();
-		return rx;
 	}
 }
 
 var s1 = Space.createNew();
 var tx1 = Transmitter.createNew(s1);
 var rx1 = Receiver.createNew(tx1);
-tx1.init();
+//tx1.init();
 function doMove() {
 	s1.move();
 	tx1.moveMolecules();
