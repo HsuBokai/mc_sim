@@ -34,7 +34,7 @@ var Receiver = {
 			for(var k = 0; k<max_k; ++k){
 				var id = "rx_time_"+parseInt(k);
 				var est = rx.tau_hat + k*rx.Ts_hat;
-				$("#"+id).position({my:"left", at:"left+"+parseInt(est), of:"#simu"});
+				//$("#"+id).position({my:"left", at:"left+"+parseInt(est), of:"#simu"});
 			}
 		}
 		rx.get_mean = function(start, num){
@@ -54,11 +54,19 @@ var Receiver = {
 			var y_bar = rx.get_mean(0,n_1);
 			var m_2 = rx.get_2_moment(0, n_1) - Math.pow(y_bar,2);
 			var y_1 = rx.observ[0];
-			rx.tau_hat = y_1 - Math.pow(y_bar-y_1, 3)/2/m_2/Math.log(n_1);
+			//rx.tau_hat = y_1 - Math.pow(y_bar-y_1, 3)/2/m_2/Math.log(n_1);
+			rx.tau_hat = y_1 - Math.pow(y_bar-y_1, 3)/m_2/Math.log(n_1);
 			//rx.tau_hat = tx.tau;
 			//rx.tau_hat = rx.observ[0] - 200;
 			rx.m_y = y_bar;
 
+			for(var i=0; i<rx.observ.length; ++i){
+				console.log(rx.observ[i]);
+			}
+			console.log(y_bar);
+			console.log(m_2);
+			console.log(n_1);
+			console.log(y_1);
 			console.log(rx.tau_hat);
 			rx.update(1);
 		}

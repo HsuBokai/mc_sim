@@ -31,22 +31,22 @@
 	height: 16px;
 	border-radius: 50%;
 	border:2px solid #cccc00;
-	position: absolute;
+}
+.round-button-circle {
+	background: #4679BD; 
+	width: 50px;
+	height: 50px;
+	border-radius: 50%;
+	border:5px solid #9fdcec;
+	overflow:hidden;
+}
+.round-button-circle:hover {
+	background:#30588e;
 }
 .rx_time {
 	background:#0000ff;
 	width: 3px;
 	height: 100%;
-}
-#tx_time_line {
-	background:#009900;
-	width: 100%;
-	height: 3px;
-}
-#rx_time_line {
-	background:#0000ff;
-	width: 100%;
-	height: 3px;
 }
 </style>
 
@@ -70,44 +70,19 @@
 		<li><a href="#">2</a></li>
 	</ul>
 	<div id="simu">
-		<div id="tx_time_line"></div>
-		<div id="rx_time_line"></div>
+		<canvas id="canvas"></canvas>
 		<div id="space">
 			<div class="nano_machine" id="tx"></div> 
 			<div class="nano_machine" id="rx"></div> 
 		</div>
-		<canvas id="canvas"></canvas>
-		<canvas id="canvas2"></canvas>
 	</div>
 </div>
 <script type="text/javascript">
 
-
-var Ts = 120;
-var tau = 50;
-var K = 10;
-
 var canvas = document.getElementById("canvas");
 var context = canvas.getContext("2d");
-$("#canvas").attr("width", parseInt(tau + Ts*K));
+$("#canvas").attr("width",window.innerWidth);
 $("#canvas").attr("height","500");
-$( "#canvas" ).position({
-	my: "left",
-	at: "center",
-	of: "#simu"
-});
-
-
-var canvas2 = document.getElementById("canvas2");
-var context2 = canvas2.getContext("2d");
-$("#canvas2").attr("width", parseInt(tau + Ts*K));
-$("#canvas2").attr("height","500");
-$( "#canvas2" ).position({
-	my: "left",
-	at: "center+"+parseInt(Ts*K),
-	of: "#simu"
-});
-
 
 function drawLine(x1, y1, x2, y2, color, width){
 	context.beginPath();
@@ -120,9 +95,15 @@ function drawLine(x1, y1, x2, y2, color, width){
 	context.stroke();
 }
 
+function drawTimeLine(){
+	drawLine(0, canvas.height*0.2, canvas.width, canvas.height*0.2, "#009900", 3);
+	drawLine(0, canvas.height*0.8, canvas.width, canvas.height*0.8, "#0000ff", 3);
+}
+drawTimeLine();
+
 $( "#space" ).position({
 	my: "left",
-	at: "center",
+	at: "left",
 	of: "#simu"
 });
 $("#tx").position({
@@ -134,16 +115,6 @@ $("#rx").position({
 	my: "top",
 	at: "top+"+parseInt(canvas.height*0.8),
 	of: "#space"
-});
-$("#tx_time_line").position({
-	my: "bottom",
-	at: "top+"+parseInt(canvas.height*0.2),
-	of: "#simu"
-});
-$("#rx_time_line").position({
-	my: "top",
-	at: "top+"+parseInt(canvas.height*0.8),
-	of: "#simu"
 });
 $("#tx_ts").position({
 	my: "top",
@@ -168,24 +139,31 @@ function animate(){
 		setTimeout(animate, 15);
 }
 
+var tau_true = 200;
+var Ts_true = 120;
+var K_cycle = 5;
+var max_width = tau_true + Ts_true*K_cycle;
+
 var Space = {
 	createNew: function(){
 		var space = {};
 		space.width = 30;
 		space.count = 0;
-		//space.canvas_pos = 0;
+		space.offset = 0;
 		space.move = function(){
-			space.count = space.count + 0.5;
-			//space.canvas_pos = (space.canvas_pos+0.5) % canvas.width;
-			//$("#space").position({my:"left", at:"left+"+parseInt(space.count), of:"#simu" });
-			$("#canvas").offset({ left: $("#canvas").offset().left-0.5 });
-			$("#canvas2").offset({ left: $("#canvas2").offset().left-0.5 });
-			//$("#canvas").position({my:"left", at:"center-"+parseInt(space.canvas_pos), of:"#simu" });
+			space.count = (space.count+0.5);
+			space.offset = (space.offset+0.5);
+			if(space.offset >= max_width)
+				space.offset = tau_true;
+			$("#space").position({my:"left", at:"left+"+parseInt(space.offset), of:"#simu" });
 			//context.clearRect(space.count-1, 0, 1, canvas.height);
 			//drawTimeLine();
 		}
 		space.get_count = function(){
 			return space.count + space.width/2;
+		}
+		space.get_offset = function(){
+			return space.offset + space.width/2;
 		}
 		return space;
 	}
@@ -219,10 +197,10 @@ var Molecule = {
 		//$(molecule.id).hide();
 		molecule.random_walk = function(){
 			var y_old = molecule.y;
-			var x_old = molecule.s1.get_count();
+			var x_old = molecule.s1.get_offset();
 			molecule.y += randn()*6 + 1;
 			$(molecule.id).position({my:"center",	at: "top+"+parseInt(molecule.y), of: "#space" });
-			drawLine(x_old, y_old, molecule.s1.get_count(), molecule.y, "black", 1);
+			drawLine(x_old, y_old, molecule.s1.get_offset(), molecule.y, "black", 1);
 		}
 		molecule.release = function(){
 			//$(molecule.id).show();
@@ -233,10 +211,6 @@ var Molecule = {
 			if(molecule.state == MOLECULE_STATE.RANDOM_WALK){
 				molecule.random_walk();
 			}
-			else if(molecule.state == MOLECULE_STATE.CAUGHT){
-				$(molecule.id).offset({ left: $(molecule.id).offset().left-0.5 });
-				//$(molecule.id).animate({left: "-=0.5"}, 15);
-			}
 		}
 		molecule.isCaught = function(rx){
 			if(molecule.state == MOLECULE_STATE.RANDOM_WALK){
@@ -244,6 +218,7 @@ var Molecule = {
 					molecule.state = MOLECULE_STATE.CAUGHT;
 					molecule.caught_time = molecule.s1.get_count();
 					rx.caught(molecule.caught_time);
+					$(molecule.id).position({my:"center",	at:"left+"+parseInt(molecule.s1.get_offset())+" top+"+parseInt(molecule.y), of: "#simu" });
 				}
 			}
 		}
@@ -300,9 +275,9 @@ var Transmitter = {
 		var tx = {};
 		tx.s1 = s1;
 		tx.n_i = [];
-		tx.tau = tau;
-		tx.Ts = Ts;
-		tx.K = K;
+		tx.tau = tau_true;
+		tx.Ts = Ts_true;
+		tx.K = K_cycle + 1;
 		tx.symbols = [];
 		tx.init = function(){
 			for(var i=0; i<tx.K; ++i){
@@ -326,10 +301,10 @@ var Transmitter = {
 	}
 }
 
-
 var s1 = Space.createNew();
 var tx1 = Transmitter.createNew(s1);
 var rx1 = Receiver.createNew(tx1);
+//tx1.init();
 function doMove() {
 	s1.move();
 	tx1.moveMolecules();
