@@ -11,6 +11,7 @@ var Receiver = {
 		rx.m_y = 0;
 		rx.m_xy = 0;
 
+		rx.i = 0;
 
 
 		rx.init = function(){
@@ -30,7 +31,8 @@ var Receiver = {
 				tx.symbols[i].catchMolecules(rx);
 			}
 		}
-		rx.update = function(max_k){
+		rx.update = function(){
+			var max_k = rx.i+1;
 			for(var k = 0; k<max_k; ++k){
 				var id = "rx_time_"+parseInt(k);
 				var est = rx.tau_hat + k*rx.Ts_hat;
@@ -61,24 +63,24 @@ var Receiver = {
 			rx.m_y = y_bar;
 
 			for(var i=0; i<rx.observ.length; ++i){
-				console.log(rx.observ[i]);
+				//console.log(rx.observ[i]);
 			}
 			console.log(y_bar);
-			console.log(m_2);
-			console.log(n_1);
+			//console.log(m_2);
+			//console.log(n_1);
 			console.log(y_1);
 			console.log(rx.tau_hat);
-			rx.update(1);
+			rx.update();
 		}
-		rx.iter_est = function(i){
-			var k = i+1;
-			var y_bar = rx.get_mean(i*tx.n_i[0], tx.n_i[0]);
-			rx.m_y = rx.m_y*i/k + y_bar/k;
-			rx.m_xy = rx.m_xy + i*y_bar;
+		rx.iter_est = function(){
+			var k = rx.i+1;
+			var y_bar = rx.get_mean((k-1)*tx.n_i[0], tx.n_i[0]);
+			rx.m_y = rx.m_y*(k-1)/k + y_bar/k;
+			rx.m_xy = rx.m_xy + (k-1)*y_bar;
 			rx.Ts_hat = (rx.m_xy*2/(k-1)/k - rx.m_y)*6/(k+1);
 
 			console.log(rx.Ts_hat);
-			rx.update(k);
+			rx.update();
 		}
 		rx.caught = function(time){
 			rx.observ.push(time);
@@ -87,11 +89,12 @@ var Receiver = {
 				console.log(rx.observ[i]);
 			}
 			*/
-			if( rx.observ.length == tx.n_i[0])
+			var n = rx.observ.length;
+			if(n == tx.n_i[0])
 				rx.init_est();
-			for(var i=1; i<tx.K; ++i){
-				if(rx.observ.length == rx.sum_n_i[i])
-					rx.iter_est(i);
+			if(n>tx.n_i[0] && n%tx.n_i[0]==0){
+				rx.i++;
+				rx.iter_est();
 			}
 		}
 		rx.init();

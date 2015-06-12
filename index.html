@@ -83,13 +83,14 @@
 <script type="text/javascript">
 
 
-var Ts = 120;
 var tau = 50;
-var K = 10;
+var Ts = 200;
+var K = 3;
+var cycle = Ts*K;
 
 var canvas = document.getElementById("canvas");
 var context = canvas.getContext("2d");
-$("#canvas").attr("width", parseInt(tau + Ts*K));
+$("#canvas").attr("width", parseInt(tau + cycle));
 $("#canvas").attr("height","500");
 $( "#canvas" ).position({
 	my: "left",
@@ -100,28 +101,39 @@ $( "#canvas" ).position({
 
 var canvas2 = document.getElementById("canvas2");
 var context2 = canvas2.getContext("2d");
-$("#canvas2").attr("width", parseInt(tau + Ts*K));
+$("#canvas2").attr("width", parseInt(tau + cycle));
 $("#canvas2").attr("height","500");
 $( "#canvas2" ).position({
 	my: "left",
-	at: "center+"+parseInt(Ts*K),
+	at: "center+"+parseInt(cycle),
 	of: "#simu"
 });
 
 
-function drawLine(x1, y1, x2, y2, color, width){
-	context.beginPath();
-	//context.arc(x, y, r, 0, Math.PI*2, false);
-	//context.fillStyle = color;
-	context.strokeStyle = color;
-	context.lineWidth = width;
-	context.moveTo(x1,y1);
-	context.lineTo(x2,y2);
-	context.stroke();
+function drawLine(x1, y1, x2, y2, color, width, cont){
+	cont.beginPath();
+	//cont.arc(x, y, r, 0, Math.PI*2, false);
+	//cont.fillStyle = color;
+	cont.strokeStyle = color;
+	cont.lineWidth = width;
+	cont.moveTo(x1,y1);
+	cont.lineTo(x2,y2);
+	cont.stroke();
 }
 
+function draw_time_slot(cont){
+	var start = 0;
+	for(var i=0; i<K; ++i){
+		start = tau + i*Ts;
+		drawLine(start, 0, start, canvas.height, "#009900", 3, cont);
+	}
+}
+
+draw_time_slot(context);
+draw_time_slot(context2);
+
 $( "#space" ).position({
-	my: "left",
+	my: "center",
 	at: "center",
 	of: "#simu"
 });
@@ -173,19 +185,40 @@ var Space = {
 		var space = {};
 		space.width = 30;
 		space.count = 0;
-		//space.canvas_pos = 0;
+		space.canvas_count = 0;
+		space.canvas_index = 0;
 		space.move = function(){
 			space.count = space.count + 0.5;
-			//space.canvas_pos = (space.canvas_pos+0.5) % canvas.width;
+			if(space.count > tau) {
+				space.canvas_count = (space.canvas_count+0.5) % cycle;
+				if(space.canvas_count == 0)
+					space.canvas_index = (space.canvas_index==0) ? 2 : 0;
+				if(space.canvas_count == cycle/2){
+					if(space.canvas_index==0){
+						$("#canvas2").position({my:"left", at:"center+"+parseInt(cycle/2-tau), of:"#simu" });
+						context2.clearRect(0,0,canvas2.width,canvas2.height);
+						draw_time_slot(context2);
+					}
+					else{
+						$("#canvas").position({my:"left", at:"center+"+parseInt(cycle/2-tau), of:"#simu" });
+						context.clearRect(0,0,canvas.width,canvas.height);
+						draw_time_slot(context);
+					}
+				}
+	
+			}
 			//$("#space").position({my:"left", at:"left+"+parseInt(space.count), of:"#simu" });
 			$("#canvas").offset({ left: $("#canvas").offset().left-0.5 });
 			$("#canvas2").offset({ left: $("#canvas2").offset().left-0.5 });
-			//$("#canvas").position({my:"left", at:"center-"+parseInt(space.canvas_pos), of:"#simu" });
 			//context.clearRect(space.count-1, 0, 1, canvas.height);
 			//drawTimeLine();
 		}
 		space.get_count = function(){
-			return space.count + space.width/2;
+			return space.count;
+			//return space.count + space.width/2;
+		}
+		space.get_context = function(){
+			return (space.canvas_index==0) ? context : context2;
 		}
 		return space;
 	}
@@ -219,10 +252,11 @@ var Molecule = {
 		//$(molecule.id).hide();
 		molecule.random_walk = function(){
 			var y_old = molecule.y;
-			var x_old = molecule.s1.get_count();
-			molecule.y += randn()*6 + 1;
+			var x_old = molecule.s1.canvas_count + tau;
+			var delta = randn()*6 + 1;
+			molecule.y += delta;
 			$(molecule.id).position({my:"center",	at: "top+"+parseInt(molecule.y), of: "#space" });
-			drawLine(x_old, y_old, molecule.s1.get_count(), molecule.y, "black", 1);
+			drawLine(x_old, y_old, x_old, molecule.y, "black", 1, molecule.s1.get_context());
 		}
 		molecule.release = function(){
 			//$(molecule.id).show();
@@ -272,10 +306,11 @@ var Symbol = {
 				$("#"+id).attr("class","molecule");
 				symbol.molecules.push(Molecule.createNew("#"+id, tx.s1));
 			}
-			drawLine(symbol.start, 0, symbol.start, canvas.height, "#009900", 3);
+			//drawLine(symbol.start, 0, symbol.start, canvas.height, "#009900", 3);
 		}
 		symbol.release = function(){
-			if(tx.s1.get_count() == symbol.start) {
+			if(tx.s1.count < tau) return;
+			if(tx.s1.canvas_count + tau == symbol.start) {
 				for(var i=0; i<tx.n_i[k]; ++i)
 					symbol.molecules[i].release();
 			}
