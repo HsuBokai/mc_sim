@@ -31,12 +31,18 @@ var Receiver = {
 				tx.symbols[i].catchMolecules(rx);
 			}
 		}
+		rx.move = function(){
+			for(var k = 0; k<tx.K; ++k){
+				var id = "rx_time_"+parseInt(k);
+				tx.s1.move_sth(id);
+			}
+		}
 		rx.update = function(){
 			var max_k = rx.i+1;
-			for(var k = 0; k<max_k; ++k){
+			for(var k = 0; k<Math.min(tx.K, max_k); ++k){
 				var id = "rx_time_"+parseInt(k);
-				var est = rx.tau_hat + k*rx.Ts_hat;
-				//$("#"+id).position({my:"left", at:"left+"+parseInt(est), of:"#simu"});
+				var est = rx.tau_hat + (rx.i-k)*rx.Ts_hat;
+				$("#"+id).position({my:"center", at:"center-"+parseInt(tx.s1.get_count()-est), of:"#space"});
 			}
 		}
 		rx.get_mean = function(start, num){
@@ -58,7 +64,7 @@ var Receiver = {
 			var y_1 = rx.observ[0];
 			//rx.tau_hat = y_1 - Math.pow(y_bar-y_1, 3)/2/m_2/Math.log(n_1);
 			rx.tau_hat = y_1 - Math.pow(y_bar-y_1, 3)/m_2/Math.log(n_1);
-			//rx.tau_hat = tx.tau;
+			rx.tau_hat = tx.tau;
 			//rx.tau_hat = rx.observ[0] - 200;
 			rx.m_y = y_bar;
 
@@ -90,6 +96,7 @@ var Receiver = {
 			}
 			*/
 			var n = rx.observ.length;
+			//console.log(rx.observ[n-1]);
 			if(n == tx.n_i[0])
 				rx.init_est();
 			if(n>tx.n_i[0] && n%tx.n_i[0]==0){

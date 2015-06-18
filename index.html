@@ -85,7 +85,7 @@
 
 var tau = 50;
 var Ts = 200;
-var K = 3;
+var K = 7;
 var cycle = Ts*K;
 
 var canvas = document.getElementById("canvas");
@@ -121,16 +121,31 @@ function drawLine(x1, y1, x2, y2, color, width, cont){
 	cont.stroke();
 }
 
+var text_number = 0;
 function draw_time_slot(cont){
 	var start = 0;
 	for(var i=0; i<K; ++i){
 		start = tau + i*Ts;
 		drawLine(start, 0, start, canvas.height, "#009900", 3, cont);
 	}
+	var unit = 10;
+	var h = canvas.height;
+	for(var i=0; i<tau+cycle; i=i+unit){
+		var ii = i+tau;
+		drawLine(ii, (i/unit%5==0)?h*0.1:h*0.15, ii, h*0.2, "#000000", 1, cont);
+		if(i/unit%10==0 && i!=0){
+			text_number += unit*10;
+			cont.fillText(parseInt(text_number),ii-20,h*0.1-10);
+		}
+		drawLine(i, h*0.8, i, (i/unit%5==0)?h*0.9:h*0.85, "#000000", 1, cont);
+		if(i/unit%10==0 && i!=0){
+			cont.fillText(parseInt(text_number),i-20,h*0.9+10);
+		}
+	}
 }
 
 draw_time_slot(context);
-draw_time_slot(context2);
+//draw_time_slot(context2);
 
 $( "#space" ).position({
 	my: "center",
@@ -187,6 +202,9 @@ var Space = {
 		space.count = 0;
 		space.canvas_count = 0;
 		space.canvas_index = 0;
+		space.move_sth = function(sth_id){
+			$("#"+sth_id).offset({ left: $("#"+sth_id).offset().left-0.5 });
+		}
 		space.move = function(){
 			space.count = space.count + 0.5;
 			if(space.count > tau) {
@@ -208,8 +226,8 @@ var Space = {
 	
 			}
 			//$("#space").position({my:"left", at:"left+"+parseInt(space.count), of:"#simu" });
-			$("#canvas").offset({ left: $("#canvas").offset().left-0.5 });
-			$("#canvas2").offset({ left: $("#canvas2").offset().left-0.5 });
+			space.move_sth("canvas");
+			space.move_sth("canvas2");
 			//context.clearRect(space.count-1, 0, 1, canvas.height);
 			//drawTimeLine();
 		}
@@ -220,6 +238,7 @@ var Space = {
 		space.get_context = function(){
 			return (space.canvas_index==0) ? context : context2;
 		}
+		
 		return space;
 	}
 };
@@ -369,6 +388,7 @@ function doMove() {
 	s1.move();
 	tx1.moveMolecules();
 	rx1.catchMolecules();
+	rx1.move();
 }
 
 </script>
