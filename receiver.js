@@ -11,7 +11,7 @@ var Receiver = {
 		var rx = {};
 		rx.rx_c;
 		rx.init = function(){
-			rx.rx_c = new Module.Receiver();
+			rx.rx_c = new Module.Receiver(); // not delete for ever
 			for(var i = 0; i<tx.K; ++i){
 				var id = "rx_time_"+parseInt(i);
 				$("#simu").append("<div id='"+id+"'/>");
@@ -66,6 +66,7 @@ var Receiver = {
 			//console.log(m_2);
 			//console.log(n_1);
 			//console.log(y_1);
+			rx.rx_c.ini_tau();
 			printf("tau_init",rx.rx_c.tau_);
 			rx.update();
 		}
