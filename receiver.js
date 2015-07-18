@@ -68,6 +68,10 @@ var Receiver = {
 			//console.log(y_1);
 			rx.rx_c.ini_tau();
 			printf("tau_init",rx.rx_c.tau_);
+			rx.rx_c.ini_mu();
+			printf("mu_init",rx.rx_c.mu_);
+			rx.rx_c.ini_lambda();
+			printf("lambda_init",rx.rx_c.lambda_);
 			rx.update();
 		}
 		rx.iter_est = function(){
@@ -80,14 +84,18 @@ var Receiver = {
 			*/
 
 			//console.log(rx.Ts_hat);
-			printf("tau_init",rx.rx_c.tau_);
-			printf("Ts",rx.rx_c.Ts_);
+			rx.rx_c.iter_tau();
+			printf("tau_",rx.rx_c.tau_);
+			printf("mu_",rx.rx_c.mu_);
+			printf("lambda_",rx.rx_c.lambda_);
+			printf("k_",rx.rx_c.k_);
+			printf("Ts_",rx.rx_c.Ts_);
 			rx.update();
 		}
 		rx.caught = function(time){
 			rx.rx_c.push_y(time);
 			n = rx.rx_c.get_n();
-			console.log(rx.rx_c.get_y(n-1));
+			//console.log(rx.rx_c.get_y(n-1));
 			if(n == tx.n_i[0]){
 				rx.rx_c.increase_k();
 				rx.init_est();

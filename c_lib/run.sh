@@ -1,12 +1,13 @@
 #!\bin\bash
 exec="./simu"
-max_test=10000
-output="/Dropbox/research/MATLAB/syn/est_channel/fisher_data/q16_8ary.csv"
-$exec $max_test 1 > ~/$output
-$exec $max_test 3 >> ~/$output
-$exec $max_test 6 >> ~/$output
-$exec $max_test 12 >> ~/$output
-$exec $max_test 24 >> ~/$output
-$exec $max_test 48 >> ~/$output
-$exec $max_test 96 >> ~/$output
+max_test=100000
+output="/Dropbox/research/MATLAB/syn/est_channel/fisher_data/pitman_scale.csv"
+n1=12
+$exec $max_test 1 $n1 > ~/$output
+for c in `seq 1 7`
+do
+	n1=`expr $n1 \* 2`
+	$exec $max_test 1 $n1 >> ~/$output
+	echo $n1
+done
 

@@ -84,9 +84,9 @@
 <script type="text/javascript">
 
 
-var tau = 50;
+var tau = 100;
 var Ts = 200;
-var K = 7;
+var K = 3;
 var cycle = Ts*K;
 
 var canvas = document.getElementById("canvas");
@@ -273,7 +273,7 @@ var Molecule = {
 		molecule.random_walk = function(){
 			var y_old = molecule.y;
 			var x_old = molecule.s1.canvas_count + tau;
-			var delta = randn()*6 + 1;
+			var delta = randn()*7 + 1;
 			molecule.y += delta;
 			$(molecule.id).position({my:"center",	at: "top+"+parseInt(molecule.y), of: "#space" });
 			drawLine(x_old, y_old, x_old, molecule.y, "black", 1, molecule.s1.get_context());
