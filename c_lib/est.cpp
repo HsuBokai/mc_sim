@@ -7,11 +7,12 @@
 using namespace emscripten;
 #endif
 
-typedef double type1;
+typedef float type1;
 
-type1 tau_true=0;
-//type1 mu_true = 150, lambda_true = 51.22, Ts_true = 200;
-type1 mu_true = 10, lambda_true = 8.1955, Ts_true = 30;;
+type1 tau_true=10;
+type1 R_true = 1;
+type1 mu_true = 10, lambda_true = 9.6, Ts_true = 10;
+//type1 mu_true = 10, lambda_true = 8.1955, Ts_true = 30;;
 
 type1 IG_pdf(type1 x, type1 mu, type1 lambda){
 	return (x<=0) ? 0 : sqrt(lambda/2/M_PI/x/x/x)*exp(-lambda*(x-mu)*(x-mu)/2/mu/mu/x);
@@ -31,6 +32,7 @@ class Receiver {
 		void increase_k(){++k_;}
 
 		type1 get_tau() const {return tau_;}
+		type1 get_R() const {return R_;}
 		type1 get_Ts() const {return Ts_;}
 		type1 get_mu() const {return mu_;}
 		type1 get_lambda() const {return lambda_;}
@@ -109,10 +111,10 @@ class Receiver {
 
 			int n = get_n();
 			type1 y_bar = mean(0,n);
-			mu_ = y_bar - tau_ - Ts_*(k_-1)/2.0;
+			mu_ = y_bar - tau_ - Ts_true*(k_-1)/2.0;
 
 			int iter_num = 0;
-			type1 max_iter_num = 1000.0;
+			type1 max_iter_num = 10000.0;
 			type1 smallest_s = 1000, best_tau = tau_;
 			type1 smallest_s_lambda = 1000, best_lambda = lambda_;
 			type1 avg_s = 0, I0 = 1.0;
@@ -122,7 +124,6 @@ class Receiver {
 			//type1 avg_epsilon_iter = 0, avg_lambda_iter = 0;
 			do{
 				//mu_ += avg_s/I0;
-				//mu_ = mu_true;
 				//mu_ += avg_epsilon_iter;
 
 				//epsilon += so tau -=
@@ -133,38 +134,35 @@ class Receiver {
 				avg_s = 0;
 
 				//lambda_ += score_lambda;
-				//lambda_ = lambda_true;
 				//lambda_ += avg_lambda_iter;
 				//avg_lambda_iter = 0;
 				score_lambda = 0;
 				//m1 = 0;
 				m_1 = 0;
-				if(lambda_ < 0) lambda_ = iter_num/max_iter_num;
-				if(mu_ < 0) mu_ = iter_num/max_iter_num;
 				//if(tau_ > y_[0]) tau_ = y_[0]-0.01;
 				if(tau_ > y_[0]) {
-					//tau_ = y_[0]-Ts_/2.0-iter_num/max_iter_num;
+					//tau_ = y_[0]-Ts_true/2.0-iter_num/max_iter_num;
 					tau_ = init_tau;
 				}
-				if(tau_ < y_[0]-Ts_) {
-					//tau_ = y_[0]-Ts_/2.0+iter_num/max_iter_num;
+				if(tau_ < y_[0]-Ts_true) {
+					//tau_ = y_[0]-Ts_true/2.0+iter_num/max_iter_num;
 					tau_ = init_tau;
 				}
 				for(int i=0; i<n; ++i){
 					type1 s = y_[i] - tau_;
-					while(s > Ts_) {
-						s -= Ts_;
+					while(s > Ts_true) {
+						s -= Ts_true;
 					}
 					type1 f0 = IG_pdf(s,mu_,lambda_);
-					type1 f1 = IG_pdf(s+Ts_,mu_,lambda_);
-					type1 f2 = IG_pdf(s+2*Ts_,mu_,lambda_);
+					type1 f1 = IG_pdf(s+Ts_true,mu_,lambda_);
+					type1 f2 = IG_pdf(s+2*Ts_true,mu_,lambda_);
 					type1 p = f0/(f0+f1+f2);
-					type1 sample_score = (score(s)*p + score(s+Ts_)*(1-p));
+					type1 sample_score = (score(s)*p + score(s+Ts_true)*(1-p));
 					avg_s += sample_score;
-					m_1 += (p/s + (1.0-p)/(s+Ts_));
-					//m1 += (s*f0+(s+Ts_)*f1+(s+2*Ts_)*f2)/(f0+f1+f2);
-					//avg_epsilon_iter += (epsilon_iter(s)*p+epsilon_iter(s+Ts_)*(1-p));
-					//avg_lambda_iter += (lambda_iter(s)*p+lambda_iter(s+Ts_)*(1-p));
+					m_1 += (p/s + (1.0-p)/(s+Ts_true));
+					//m1 += (s*f0+(s+Ts_true)*f1+(s+2*Ts_true)*f2)/(f0+f1+f2);
+					//avg_epsilon_iter += (epsilon_iter(s)*p+epsilon_iter(s+Ts_true)*(1-p));
+					//avg_lambda_iter += (lambda_iter(s)*p+lambda_iter(s+Ts_true)*(1-p));
 				}
 				m_1 /= n;
 				//m1 /= n;
@@ -177,8 +175,16 @@ class Receiver {
 				//avg_lambda_iter = avg_lambda_iter/n;
 				iter_num ++;
 				//fprintf(stderr,"iter_num=%d\n", iter_num);
-				mu_ = y_bar - tau_ - Ts_*(k_-1)/2.0;
-				lambda_ = 1/(m_1 - 1/mu_);
+
+
+				mu_ = mu_true;
+				lambda_ = lambda_true;
+				//mu_ = y_bar - tau_ - Ts_true*(k_-1)/2.0;
+				//lambda_ = 1/(m_1 - 1/mu_);
+				//if(lambda_ < 0) lambda_ = iter_num/max_iter_num;
+				//if(mu_ < 0) mu_ = iter_num/max_iter_num;
+
+
 				if(0 < avg_s && avg_s < smallest_s) {
 					smallest_s = avg_s;
 					best_tau = tau_;
@@ -187,7 +193,7 @@ class Receiver {
 					smallest_s = -avg_s;
 					best_tau = tau_;
 				}
-				if(avg_s/I0 > Ts_ || avg_s/I0 < -Ts_) {
+				if(avg_s/I0 > Ts_true || avg_s/I0 < -Ts_true) {
 					//tau_ = best_tau;
 					//avg_s = 0;
 					//fprintf(stderr,"diverge! best_tau=%f\n", best_tau);
@@ -205,12 +211,12 @@ class Receiver {
 				if(score_lambda > 10000 || score_lambda < -10000) {
 					lambda_ = best_lambda;
 					score_lambda = 0;
-					fprintf(stderr,"diverge! best_lambda=%f\n",best_lambda);
+					//fprintf(stderr,"diverge! best_lambda=%f\n",best_lambda);
 					//fprintf(stderr,"avg_lambda_iter=%f\n",avg_lambda_iter);
 				}
 				
 				if(iter_num > max_iter_num){
-					fprintf(stderr,"iter_num over %f\n", max_iter_num);
+					//fprintf(stderr,"iter_num over %f\n", max_iter_num);
 					tau_ = best_tau;
 					break;
 				}
@@ -226,6 +232,7 @@ class Receiver {
 			//fprintf(stderr,"score_lambda=%f\n", score_lambda);
 			//fprintf(stderr,"avg_s/I0=%f\n", avg_s/I0);
 			//if(tau_ > 55 or tau_ < 45) fprintf(stderr,"iter_tau=%f\n",tau_);
+			//fprintf(stderr,"iter_tau=%f\n",tau_);
 			//fprintf(stderr,"mu_=%f\n",mu_);
 			//fprintf(stderr,"lambda_=%f\n",lambda_);
 		}
@@ -240,12 +247,13 @@ class Receiver {
 				A = A*(i-1)/i + y_bar_new/i;
 				B = B + (i-1)*y_bar_new;
 			}
-			Ts_ = 12*B/(k_*(k_-1)*(k_+1)) - 6*A/(k_+1);
+			type1 Ts_hat = 12*B/(k_*(k_-1)*(k_+1)) - 6*A/(k_+1);
+			R_ = Ts_hat/Ts_true;
 			//fprintf(stderr,"Ts_ = %f\n",Ts_);
 		}
 
-#define LARGE 10*mu_true
-#define DELTA 0.01
+#define LARGE 50
+#define DELTA 0.05
 
 		void pitman(){
 			int n = get_n();
@@ -273,15 +281,43 @@ class Receiver {
 		type1 pitman_scale(){
 			int n = get_n();
 			long double denominator = 0, nominator = 0;
-			for(type1 u = 0; u<LARGE; u+= DELTA){
+			for(type1 u = DELTA; u<=LARGE; u+= DELTA){
 				//fprintf(stderr,"u=%f\n",u);
 				long double value = 1;
 				for(int i=0; i<n; ++i) {
-					long double ig_large = exp(u)*y_[i]*IG_pdf(exp(u)*y_[i]/y_[0], mu_true, lambda_true);
+					long double ig_large = IG_pdf(y_[i]/u, mu_true, lambda_true)/u;
 					value *= ig_large;
 					//fprintf(stderr,"value=%f\n",value);
 				}
-				//value *= exp(u*n);
+				value /= u;;
+				denominator += value;
+				nominator += value*log(u);
+				//fprintf(stderr,"deno_ = %f\n",denominator);
+				//fprintf(stderr,"no_ = %f\n",nominator);
+			}
+			//denominator *= DELTA;
+			//nominator *= DELTA;
+			type1 ret = nominator/denominator;
+			//fprintf(stderr,"log(y0)=%f\n",log(y_[0]));
+			//fprintf(stderr,"ret = %f\n",ret);
+			return ret;
+		}
+
+		void pitman_location_scale(){
+			int n = get_n();
+			type1 denominator = 0, nominator = 0;
+			for(type1 u = 0; u<LARGE; u+= DELTA){
+				//fprintf(stderr,"u=%f\n",u);
+				long double value = 0;
+				for(type1 c=DELTA; c<=LARGE; c+=DELTA){
+					long double v2 = 1;
+					for(int i=0; i<n; ++i){
+						long double ig_large = IG_pdf((u+y_[i]-y_[0])/c, mu_true, lambda_true)/c;
+						v2 *= ig_large;
+					}
+					v2 /= c;
+					value += v2;
+				}				
 				denominator += value;
 				nominator += value*u;
 				//fprintf(stderr,"deno_ = %f\n",denominator);
@@ -289,16 +325,14 @@ class Receiver {
 			}
 			//denominator *= DELTA;
 			//nominator *= DELTA;
-			type1 ret = log(y_[0]) - nominator/denominator;
-			//fprintf(stderr,"log(y0)=%f\n",log(y_[0]));
-			//fprintf(stderr,"ret = %f\n",ret);
-			return exp(ret);
+			tau_ = y_[0] - nominator/denominator;
+			fprintf(stderr,"y0=%f\n",y_[0]);
+			fprintf(stderr,"tau_ = %f\n",tau_);
 		}
-
-
 
 	private:
 		type1 tau_;
+		type1 R_;
 		type1 Ts_;
 		int k_;
 		type1 mu_;
@@ -352,8 +386,25 @@ std::random_device rd;
 std::normal_distribution<type1> normal(0.0,1.0);
 std::uniform_real_distribution<type1> uni(0.0,1.0);
 
+
+type1 get_normal(){
+	int n=12;
+	type1 ret = 0;
+	for(int i=0; i<n; ++i)
+		ret += uni(rd);
+	return ret - n/2;
+}
+
 type1 get_IG_sample(){
-	
+	/*
+	type1 ret = 0;
+	type1 pos = 0;
+	while(pos < 300){
+		ret += 0.1;
+		pos += (get_normal()*30+3);
+	}
+	*/
+	///*
 	type1 mu = mu_true, lambda = lambda_true;
 	type1 v = normal(rd);
 	type1 yy = v*v;
@@ -362,7 +413,7 @@ type1 get_IG_sample(){
 	type1 th = (mu)/(mu + xx);
 
 	type1 ret = (test <= th)? xx : (mu*mu)/xx;
-	
+	//*/
 
 	/*
 	type1 p = uni(rd);
@@ -419,11 +470,13 @@ type1 pitman_scale(int q1){
 	for(int i=0; i<q1; ++i)
 		x.push_back( get_IG_sample() );
 	std::sort(x.begin(), x.end());
+	for(int i=0; i<q1; ++i)
+		x[i] *= R_true;
 
 	//rx
 	for(int i=0; i<q1; ++i)
 		rx_c.push_y(x[i]);
-	err = (rx_c.pitman_scale() - 1);
+	err = (rx_c.pitman_scale() - log(R_true));
 	return err;
 }
 
@@ -445,6 +498,31 @@ type1 pitman_location(int q1){
 	return err;
 }
 
+type1 pitman_location_scale(int q1){
+	type1 err;
+	Receiver rx_c;
+	//tx
+	std::vector<type1> x;
+	for(int i=0; i<q1; ++i)
+		x.push_back( tau_true + 0 + get_IG_sample() );
+	std::sort(x.begin(), x.end());
+	for(int i=0; i<q1; ++i)
+		x[i] *= R_true;
+
+	//rx
+	for(int i=0; i<q1; ++i)
+		rx_c.push_y(x[i]);
+	rx_c.pitman_location_scale();
+
+	Receiver rx_c_2;
+	for(int i=0; i<q1; ++i)
+		rx_c_2.push_y(x[i]-R_true*tau_true);
+	type1 R_hat = exp(rx_c_2.pitman_scale());
+	fprintf(stderr, "R_hat=%f\n",R_hat);
+	err = (rx_c.get_tau()*R_hat - tau_true*R_true);
+	return err;
+}
+
 
 void run_pitman(int test_max, int q1){
 	std::vector<type1> bias(1,0);
@@ -453,7 +531,8 @@ void run_pitman(int test_max, int q1){
 		//fprintf(stderr,"test=%d\n",test);
 
 		//type1 err = pitman_location(q1);
-		type1 err = pitman_scale(q1);
+		//type1 err = pitman_scale(q1);
+		type1 err = pitman_location_scale(q1);
 
 		bias[0] += err;
 		mse_table[0] += err*err;
@@ -489,22 +568,24 @@ int main(int argc, char* argv[]){
 	//std::uniform_int_distribution<int> uni_int(0,7);
 	//int m_ary[] = {q1/8,q1*3/8,q1*5/8,q1*7/8,q1*9/8,q1*11/8,q1*13/8,q1*15/8};
 
-	run_pitman(test_max,q1);
-/*
+	//run_pitman(test_max,q1);
+
 	type1 err;
-	std::vector<type1> bias(3,0);
-	std::vector<type1> mse_table(3,0);
+	std::vector<type1> bias(4,0);
+	std::vector<type1> mse_table(4,0);
 	for(int test=0;test<test_max;test++){
 		//fprintf(stderr,"test=%d\n",test);
-		Receiver rx_c;
+		Receiver rx_c, rx_c_2;
 		//tx
 		std::vector<type1> x;
 		for(int i=0; i<q1; ++i)
 			x.push_back( tau + 0 + get_IG_sample());
 			//x.push_back( tau + 0);
 		rx_c.increase_k();
+		rx_c_2.increase_k();
 		for(int k=1; k<K; ++k){
 			rx_c.increase_k();
+			rx_c_2.increase_k();
 			int q = m_ary[uni_int(rd)];
 			for(int i=0; i<q; ++i)
 				x.push_back( tau + k*Ts + get_IG_sample());
@@ -515,10 +596,24 @@ int main(int argc, char* argv[]){
 			x.push_back( tau + K*Ts + get_IG_sample());
 		// transmit more one symbol
 		std::sort(x.begin(), x.end());
+		for(int i=0; i<N; ++i)
+			x[i] *= R_true;
 
 		//rx
+		/*
+		for(int i=0; i<N; ++i)
+			rx_c_2.push_y(x[i]);
+		rx_c_2.est_Ts(q1);
+		type1 R_hat = rx_c_2.get_R();
+		err = (R_hat-R_true);
+		bias[3] += err;
+		mse_table[3] += err*err;
+		//mse_table[3] += err*err*Ts_true*Ts_true;
+		*/
+		type1 R_hat = R_true;
+
 		for(int i=0; i<q1; ++i)
-			rx_c.push_y(x[i]);
+			rx_c.push_y(x[i]/R_hat);
 		rx_c.ini_tau();
 		rx_c.ini_mu();
 		rx_c.ini_lambda();
@@ -527,23 +622,23 @@ int main(int argc, char* argv[]){
 		bias[0] += err;
 		mse_table[0] += err*err;
 		for(int i=q1; i<N; ++i){
-			rx_c.push_y(x[i]);
+			rx_c.push_y(x[i]/R_hat);
 		}
-		rx_c.est_Ts(q1);
 		rx_c.iter_tau();
 		err = (rx_c.get_tau() - tau);
 		bias[1] += err;
 		mse_table[1] += err*err;
-		//err = 0;
 
-		err += (K-1)*(rx_c.get_Ts()-Ts);
+		/*
+		err =  R_hat*(rx_c.get_tau()+(K-1)*Ts_true) - R_true*( tau_true + (K-1)*Ts_true);
 		bias[2] += err;
 		mse_table[2] += err*err;
+		*/
 	}
 	fprintf(stderr, "q1=%d\n",q1);
 	fprintf(stderr,"bias_ini_tau,\t%f\n", bias[0]/test_max);
 	fprintf(stderr,"mse_ini_tau,\t%f\n", mse_table[0]/test_max);
-	fprintf(stderr, "K\tmse_iter_tau\tbias_iter_tau\tmse_s_k\tbias_s_k\n");
+	fprintf(stderr, "K\tmse_iter_tau\tbias_iter_tau\tmse_S_k\tbias_S_k\tmse_R\tbias_R\n");
 
 	if(K==1){
 		printf("1,\t%f,\t\n",mse_table[0]/test_max);
@@ -552,11 +647,13 @@ int main(int argc, char* argv[]){
 		printf("%d,\t",K);
 		printf("%f,\t", mse_table[1]/test_max);
 		printf("%f,\t", bias[1]/test_max);
-		printf("%f,\t", mse_table[2]/test_max);
-		printf("%f,\t", bias[2]/test_max);
+		//printf("%f,\t", mse_table[2]/test_max);
+		//printf("%f,\t", bias[2]/test_max);
+		//printf("%f,\t", mse_table[3]/test_max);
+		//printf("%f,\t", bias[3]/test_max);
 		printf("\n");
 	}
-*/
+
 	return 0;
 }
 #endif

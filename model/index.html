@@ -54,9 +54,6 @@
 <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.1/angular.min.js"></script>
 <script src="./bootstrap-3.3.4-dist/js/bootstrap.min.js"></script>
-<script src="http://numericjs.com/lib/numeric-1.2.6.min.js"></script>
-<script src="./c_lib/function.js"></script>
-<script src="./receiver.js"></script>
 
 </head>
 <body>
@@ -84,7 +81,7 @@
 <script type="text/javascript">
 
 var dis = 0.3;
-var sigma = 25;
+var sigma = 20;
 var v = 2.4;
 var tau = 10;
 var Ts = 10;
@@ -284,7 +281,7 @@ var Molecule = {
 			var delta = randn()*sigma + v;
 			molecule.y += delta;
 			$(molecule.id).position({my:"center",	at: "top+"+parseInt(molecule.y), of: "#space" });
-			//drawLine(x_old, y_old, x_old, molecule.y, "black", 1, molecule.s1.get_context());
+			drawLine(x_old, y_old, x_old, molecule.y, "black", 1, molecule.s1.get_context());
 		}
 		molecule.release = function(){
 			//$(molecule.id).show();
@@ -306,7 +303,7 @@ var Molecule = {
 				if(molecule.y > canvas.height*(1-dis)){
 					molecule.state = MOLECULE_STATE.CAUGHT;
 					molecule.caught_time = molecule.s1.get_count();
-					rx.caught(molecule.caught_time);
+					//rx.caught(molecule.caught_time);
 				}
 			}
 		}
@@ -370,7 +367,7 @@ var Transmitter = {
 		tx.K = K;
 		tx.symbols = [];
 		tx.init = function(){
-			var m_ary = [7,21];
+			var m_ary = [1,4];
 			for(var i=0; i<tx.K; ++i){
 				var q = m_ary[rand_uniform(2)];
 				tx.n_i.push(q);
@@ -396,12 +393,13 @@ var Transmitter = {
 
 var s1 = Space.createNew();
 var tx1 = Transmitter.createNew(s1);
-var rx1 = Receiver.createNew(tx1);
 function doMove() {
 	s1.move();
 	tx1.moveMolecules();
-	rx1.catchMolecules();
-	rx1.move();
+	for(var i=0; i<K; ++i){
+		tx1.symbols[i].catchMolecules(0);
+	}
+
 }
 
 </script>
