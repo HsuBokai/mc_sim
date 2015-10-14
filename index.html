@@ -50,8 +50,8 @@
 }
 </style>
 
-<script src="//code.jquery.com/jquery-1.10.2.js"></script>
-<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.1/angular.min.js"></script>
 <script src="./bootstrap-3.3.4-dist/js/bootstrap.min.js"></script>
 <script src="http://numericjs.com/lib/numeric-1.2.6.min.js"></script>
@@ -62,13 +62,15 @@
 <body>
 <div id="all">
 	<ul class="nav nav-pills">
-		<li><button class="btn btn-primary" 
-					type="button" 
-					onclick="control();">
-					start/stop
+		<li><button class="btn btn-primary" type="button" 
+			onclick="control();">
+			Animation Start/Stop
 		</button></li>
-		<li><a href="#">1</a></li>
-		<li><a href="#">2</a></li>
+		<li><button class="btn btn-primary" type="button" 
+			onclick="traceToggle();">
+			Trace On/Off
+		</button></li>
+		<!--<li><a href="#">2</a></li>-->
 	</ul>
 	<div id="simu">
 		<div id="tx_time_line"></div>
@@ -127,6 +129,7 @@ function drawLine(x1, y1, x2, y2, color, width, cont){
 
 var text_number = 0;
 function draw_time_slot(cont){
+	//cont.font = "20px serif";
 	var start = 0;
 	for(var i=0; i<K; ++i){
 		start = (tau + i*Ts)*unit;
@@ -182,21 +185,25 @@ $("#tx_ts").position({
 	of: "#simu"
 });
 
-var bool = false;
+var isStart = false;
 function control(){
-	if(bool==false){
-		bool = true;
+	if(isStart==false){
+		isStart = true;
 		animate();
 	}
 	else{
-		bool = false;
+		isStart = false;
 	}
 }
 
 function animate(){
 	doMove();
-	if(bool)
-		setTimeout(animate, 15);
+	if(isStart) setTimeout(animate, 15);
+}
+
+var isTraceOn = true;
+function traceToggle(){
+	isTraceOn = (isTraceOn==false) ? true : false;
 }
 
 var Space = {
@@ -284,7 +291,7 @@ var Molecule = {
 			var delta = randn()*sigma + v;
 			molecule.y += delta;
 			$(molecule.id).position({my:"center",	at: "top+"+parseInt(molecule.y), of: "#space" });
-			//drawLine(x_old, y_old, x_old, molecule.y, "black", 1, molecule.s1.get_context());
+			if(isTraceOn) drawLine(x_old, y_old, x_old, molecule.y, "gray", 1, molecule.s1.get_context());
 		}
 		molecule.release = function(){
 			//$(molecule.id).show();
@@ -370,7 +377,7 @@ var Transmitter = {
 		tx.K = K;
 		tx.symbols = [];
 		tx.init = function(){
-			var m_ary = [7,21];
+			var m_ary = [2,6];
 			for(var i=0; i<tx.K; ++i){
 				var q = m_ary[rand_uniform(2)];
 				tx.n_i.push(q);
